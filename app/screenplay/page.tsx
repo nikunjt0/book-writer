@@ -387,6 +387,7 @@ export default function ScreenplayPage() {
                     />
                   ) : currentSceneId ? (
                     <ScriptEditor
+                      key = {currentSceneId}
                       scene={{
                         id: currentSceneId,
                         content: scenes.find((s) => s.id === currentSceneId)!

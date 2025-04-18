@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { useWritingActivity } from "@/contexts/WritingActivityContext"
 import { recordWritingToday } from "@/components/writing-tracker"
@@ -22,6 +22,10 @@ export function ScriptEditor({ scene, onChange }: ScriptEditorProps) {
   const [content, setContent] = useState(scene.content)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { recordToday } = useWritingActivity()
+
+  useEffect(() => {
+    setContent(scene.content);
+  }, [scene.id, scene.content]);
 
   /* helpers -------------------------------------------------------------- */
   const pad = (n: number, str: string) => " ".repeat(n) + str
