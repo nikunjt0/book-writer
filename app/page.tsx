@@ -3,12 +3,18 @@ import { ProjectCreation } from "@/components/project-creation"
 import { WritingTracker } from "@/components/writing-tracker"
 import { PastProjects } from "@/components/past-projects"
 import { getCurrentDate } from "@/lib/utils"
+import { AuthButton } from "@/components/auth-button"
 
 export default function Home() {
   const currentDate = getCurrentDate()
 
   return (
     <main className="min-h-screen bg-white">
+      {/* Auth button in top right */}
+      <div className="absolute top-4 right-4 z-10">
+        <AuthButton />
+      </div>
+
       {/* Top image gallery with rotating themes */}
       <ImageGallery />
 
@@ -24,7 +30,7 @@ export default function Home() {
 
           {/* Writing tracker on the right */}
           <div className="w-full md:w-80 lg:w-96">
-            <h2 className="text-xl font-medium mb-2 text-black">{currentDate}</h2>
+            <h2 className="text-xl font-medium mb-2">{currentDate}</h2>
             <WritingTracker />
           </div>
         </div>

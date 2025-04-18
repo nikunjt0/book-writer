@@ -3,6 +3,8 @@
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { useWritingActivity } from "@/contexts/WritingActivityContext"
+import { recordWritingToday } from "@/components/writing-tracker"
+import { useAuth } from "@/contexts/AuthContext"
 
 type Elem = "scene" | "character" | "dialogue" | "action" | "transition"
 
@@ -16,6 +18,7 @@ const DIALOGUE_INDENT = 20        // spaces in from the left edge
 const DIALOGUE_WIDTH  = 35        // max visible chars per line (after indent)
 
 export function ScriptEditor({ scene, onChange }: ScriptEditorProps) {
+  const { currentUser } = useAuth()
   const [content, setContent] = useState(scene.content)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { recordToday } = useWritingActivity()
@@ -163,7 +166,9 @@ export function ScriptEditor({ scene, onChange }: ScriptEditorProps) {
         setContent(raw)
         onChange({ ...scene, content: raw })
         }
-        recordToday()
+        if (currentUser) {
+            recordWritingToday(currentUser.uid)
+        }    
     }
 
   return (

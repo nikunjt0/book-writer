@@ -1,16 +1,19 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 import { getTodaysTheme, imageThemes } from "@/lib/themes"
-import { useWritingActivity } from "@/contexts/WritingActivityContext"
+import { doc, setDoc, serverTimestamp, collection, getDocs } from "firebase/firestore"
+import { firestore } from "@/lib/firebaseClient"
+import { useAuth } from "@/contexts/AuthContext"
 
-/* ───── helpers ───── */
-const START_DATE = new Date("2025-03-01")
-const today = new Date()
+export async function recordWritingToday(uid: string) {
+  const todayKey = new Date().toISOString().slice(0, 10)
+  const ref = doc(firestore, "users", uid, "writingActivity", todayKey)
+  await setDoc(ref, { wrote: true, timestamp: serverTimestamp() }, { merge: true })
+}
 
-const dateKey = (d: Date) =>
-  d.toISOString().slice(0, 10) /* YYYY‑MM‑DD */
+const dateKey = (d: Date) => d.toISOString().slice(0, 10)
 
 const listDays = (from: Date, to: Date) => {
   const days: Date[] = []
@@ -23,21 +26,38 @@ const listDays = (from: Date, to: Date) => {
   return days
 }
 
-/* ───── component ───── */
 export function WritingTracker() {
-  /* ---------- persistent activity map ---------- */
-  const { activity } = useWritingActivity()
+  const { currentUser } = useAuth()
+  const [activity, setActivity] = useState<Record<string, boolean>>({})
+  const [startDate, setStartDate] = useState<Date | null>(null)
 
-  /* save whenever activity changes */
   useEffect(() => {
-    localStorage.setItem("writing‑activity", JSON.stringify(activity))
-  }, [activity])
+    const fetchActivity = async () => {
+      if (!currentUser) return
+      const ref = collection(firestore, "users", currentUser.uid, "writingActivity")
+      const snap = await getDocs(ref)
 
-  /* expose recordToday if you want it elsewhere */
-  // (window as any).recordWritingToday = recordToday   // <- uncomment for quick debugging
+      const data: Record<string, boolean> = {}
+      let earliestDate: string | null = null
 
-  /* ---------- prepare grid data ---------- */
-  const days = listDays(START_DATE, today) // chronological
+      snap.forEach(docSnap => {
+        const k = docSnap.id // YYYY-MM-DD
+        data[k] = docSnap.data().wrote === true
+        if (!earliestDate || k < earliestDate) earliestDate = k
+      })
+
+      setActivity(data)
+
+      // Dynamically set start date from first writing day
+      if (earliestDate) {
+        setStartDate(new Date(earliestDate))
+      }
+    }
+
+    fetchActivity()
+  }, [currentUser])
+
+  const today = new Date()
   const currentTheme = getTodaysTheme() as keyof typeof imageThemes
   const themeColor = imageThemes[currentTheme].color
   const colorClassMap: Record<string, string> = {
@@ -46,17 +66,26 @@ export function WritingTracker() {
     green: "bg-green-500",
   }
 
-  const columns = 9 /* keep your original layout */
+  const columns = 9
+
+  if (!startDate) {
+    return <p className="text-gray-500">Loading activity...</p>
+  }
+
+  const days = listDays(startDate, today)
 
   return (
     <div className="border rounded-md p-4 bg-white">
       <div
         className="grid gap-2 overflow-y-auto"
-        style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, maxHeight: 300 }} /* <- makes it scroll */
+        style={{
+          gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+          maxHeight: 300,
+        }}
       >
-        {days.map((d, idx) => {
+        {days.map((d) => {
           const k = dateKey(d)
-          const wrote = activity[k] === 1
+          const wrote = activity[k]
           return (
             <div
               key={k}
@@ -73,9 +102,7 @@ export function WritingTracker() {
       {/* legend */}
       <div className="mt-4 text-sm text-gray-500">
         <div className="flex items-center gap-2">
-          <div
-            className={cn("w-3 h-3 rounded-sm", colorClassMap[themeColor])}
-          ></div>
+          <div className={cn("w-3 h-3 rounded-sm", colorClassMap[themeColor])}></div>
           <span>Days you wrote</span>
         </div>
         <div className="flex items-center gap-2">
