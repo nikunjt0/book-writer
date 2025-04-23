@@ -4,6 +4,7 @@ import { WritingTracker } from "@/components/writing-tracker"
 import { PastProjects } from "@/components/past-projects"
 import { getCurrentDate } from "@/lib/utils"
 import { AuthButton } from "@/components/auth-button"
+import { FriendsButton } from "@/components/friends-button"
 
 export default function Home() {
   const currentDate = getCurrentDate()
@@ -30,7 +31,10 @@ export default function Home() {
 
           {/* Writing tracker on the right */}
           <div className="w-full md:w-80 lg:w-96">
-            <h2 className="text-xl font-medium mb-2">{currentDate}</h2>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-xl font-medium">{currentDate}</h2>
+              <FriendsButton/>
+            </div>
             <WritingTracker />
           </div>
         </div>

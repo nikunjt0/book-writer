@@ -1,35 +1,66 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useAuth } from "@/contexts/AuthContext"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { getAuth } from "firebase/auth";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { firestore } from "@/lib/firebaseClient";
+import { doc, setDoc } from "firebase/firestore";
 
 export default function SignInPage() {
-  const { signInWithGoogle, userLoggedIn } = useAuth()
-  const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
+  const { signInWithGoogle, userLoggedIn } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
-  // If user is already logged in, redirect to home
+  // Redirect if already signed in
   if (userLoggedIn) {
-    router.push("/")
-    return null
+    router.push("/");
+    return null;
   }
 
   const handleGoogleSignIn = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      await signInWithGoogle()
-      router.push("/")
+      // 1. Trigger the Google sign-in flow
+      await signInWithGoogle();
+  
+      // 2. Grab the newly-signed-in user
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) throw new Error("No user after Google sign-in");
+  
+      // 3. Write their profile document
+      await setDoc(
+        doc(firestore, "users", user.uid),
+        {
+          displayName: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL || null,
+          friends: [],
+          requestedFriends: [],
+        },
+        { merge: true }
+      );
+  
+      // 4. Push home
+      router.push("/");
     } catch (error) {
-      console.error("Error signing in with Google:", error)
+      console.error("Error signing in with Google:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };  
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -47,6 +78,7 @@ export default function SignInPage() {
             Sign in to your account to access your creative projects
           </CardDescription>
         </CardHeader>
+
         <CardContent className="flex flex-col gap-4">
           <Button
             variant="outline"
@@ -58,6 +90,7 @@ export default function SignInPage() {
               <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
             ) : (
               <svg viewBox="0 0 24 24" className="h-5 w-5">
+                {/* Google “G” icon SVG paths */}
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                   fill="#4285F4"
@@ -80,6 +113,7 @@ export default function SignInPage() {
             <span>{isLoading ? "Signing in..." : "Sign in with Google"}</span>
           </Button>
         </CardContent>
+
         <CardFooter className="flex justify-center">
           <p className="text-sm text-muted-foreground text-center">
             By signing in, you agree to our Terms of Service and Privacy Policy.
@@ -87,5 +121,5 @@ export default function SignInPage() {
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }
